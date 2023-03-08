@@ -75,12 +75,12 @@ def read_development_meta(meta_csv):
     emotion_labels = []
 
     for row in df.iterrows():
-        
-        audio_name = row[1]['filename']
-        emotion_label = row[1]['emotionlabel']
+        audio_name, label = row[1][0].split(',')
+        # audio_name = row[1]['filename']
+        # emotion_label = row[1]['emotionlabel']
 
-        audio_names.append(audio_name)
-        emotion_labels.append(emotion_label)
+        audio_names.append(audio_name+'.wav')
+        emotion_labels.append(label)
         
     return audio_names, emotion_labels
     
@@ -104,7 +104,7 @@ def calculate_features(args):
     audio_dir = dataset_dir
     
     if data_type == 'development':
-        meta_csv = os.path.join(dataset_dir, 'zhao_code', 'demos_data', 'meta.csv')
+        meta_csv = os.path.join(dataset_dir, 'REFERENCE.csv')
 
     hdf5_path = os.path.join(workspace, 'features', 'logmel', '{}.h5'.format(data_type))
 
@@ -153,9 +153,12 @@ def calculate_features(args):
             stack_n1 = seq_len / len(feature) - 1
             stack_n2 = seq_len % len(feature)
             feature_temp = feature
-            for n1 in range(0, stack_n1):
-                feature = np.vstack((feature, feature_temp))
+            if stack_n1>=1:
+                for n1 in range(0, stack_n1):
+                    feature = np.vstack((feature, feature_temp))
             feature = np.vstack((feature, feature_temp[0:stack_n2]))
+
+        feature = feature [:seq_len]
 
         hf['feature'].resize((n + 1, seq_len, mel_bins))
         hf['feature'][n] = feature
@@ -185,8 +188,8 @@ def calculate_features(args):
 if __name__ == '__main__':
 
     # this part is for debugging
-    DATASET_DIR = "/home/zhao/NAS/data_work/Zhao/wav_DEMoS"
-    WORKSPACE = "/home/zhao/NAS/data_work/Zhao/wav_DEMoS/zhao_code/pub_demos_cnn"
+    DATASET_DIR = "/Users/liuhongye/BIT/Adversarial_Attacks_for_SER/data"
+    WORKSPACE = "/Users/liuhongye/BIT/Adversarial_Attacks_for_SER/data/code/pub_demos_cnn"
     DEV_SUBTASK_A_DIR = "development-subtaskA"
     parser = argparse.ArgumentParser(description='Example of parser. ')
 

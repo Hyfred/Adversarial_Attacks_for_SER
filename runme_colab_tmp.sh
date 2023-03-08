@@ -1,11 +1,11 @@
 #!/bin/bash
 # You need to modify this path
 #DATASET_DIR="/home/renzhao/demos/demos4"
-DATASET_DIR="/Users/liuhongye/BIT/Adversarial_Attacks_for_SER/data"
+DATASET_DIR="/content/drive/MyDrive/Adversarial_Attacks_for_SER/data"
 
 # You need to modify this path as your workspace
 #WORKSPACE="/home/renzhao/demos/demos4/pub_demos_cnn"
-WORKSPACE="/Users/liuhongye/BIT/Adversarial_Attacks_for_SER/data/code/pub_demos_cnn"
+WORKSPACE="/content/drive/MyDrive/Adversarial_Attacks_for_SER/data/code/pub_demos_cnn"
 
 #DEV_SUBTASK_A_DIR="demos_data"
 DEV_SUBTASK_A_DIR="development-subtaskA"
@@ -24,16 +24,7 @@ CONVLAYER=1
 #python utils/features.py logmel --dataset_dir=$DATASET_DIR --subdir=$EVAL_SUBTASK_A_DIR --data_type=evaluation --workspace=$WORKSPACE
 #python utils/features.py logmel --dataset_dir=$DATASET_DIR --subdir=$EVAL_SUBTASK_B_DIR --data_type=evaluation --workspace=$WORKSPACE
 
-############ Baseline ############
-# Train on full development data
-python pytorch-baseline/main_pytorch.py train --dataset_dir=$DATASET_DIR --subdir=$DEV_SUBTASK_A_DIR --workspace=$WORKSPACE --feature_type=$FEATURE --holdout_fold=$HOLDOUT_FOLD --alpha_value=0.1 --cuda
-
-# Inference evaluation data
-python pytorch-baseline/main_pytorch.py inference_validation_data --dataset_dir=$DATASET_DIR --subdir=$DEV_SUBTASK_A_DIR --workspace=$WORKSPACE --feature_type=$FEATURE --holdout_fold=$HOLDOUT_FOLD --iteration=10000  --alpha_value=0.1 --cuda
-
-
-
-epsilon_value=(0.02)
+epsilon_value=(0.04 0.06 0.08 0.1)
 #epsilon_value=(0.02 0.04 0.06 0.08 0.1)
 alpha_value=(0.1)
 
@@ -46,7 +37,7 @@ do
 	# Train model for subtask A
 	# python $BACKEND/main_pytorch.py train --dataset_dir=$DATASET_DIR --subdir=$DEV_SUBTASK_A_DIR --workspace=$WORKSPACE --feature_type=$FEATURE --validation --holdout_fold=$HOLDOUT_FOLD --epsilon_value=${epsilon_value[$i]}  --alpha_value=${alpha_value[$j]} --cuda
 
-	# # Evaluate subtask A
+	# Evaluate subtask A
 	# python $BACKEND/main_pytorch.py inference_validation_data --dataset_dir=$DATASET_DIR --subdir=$DEV_SUBTASK_A_DIR --workspace=$WORKSPACE --feature_type=$FEATURE --validation --holdout_fold=$HOLDOUT_FOLD --iteration=10000 --epsilon_value=${epsilon_value[$i]}  --alpha_value=${alpha_value[$j]} --cuda
 
 

@@ -7,10 +7,16 @@
 sample_rate = 16000
 window_size = 512 #1024 
 overlap = 256 #256 
-seq_len = 373 #344 
+seq_len = 373 #344
 mel_bins = 64 #64 #257
 
-labels = ['anger', 'disgust', 'fear', 'guilt', 'happiness', 'sadness', 'surprise']
+# labels = ['anger', 'disgust', 'fear', 'guilt', 'happiness', 'sadness', 'surprise']
+labels = ['normal', 'abnormal'] #{0(-1):normal,1:abnormal}
 
 lb_to_ix = {lb: ix for ix, lb in enumerate(labels)}
 ix_to_lb = {ix: lb for ix, lb in enumerate(labels)}
+
+
+
+# lb_to_ix = {'normal':1, 'abnormal':-1}
+# ix_to_lb = {1:'normal', -1:'abnormal'}

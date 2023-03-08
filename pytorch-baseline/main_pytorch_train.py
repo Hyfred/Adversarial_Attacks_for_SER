@@ -28,7 +28,7 @@ batch_size = 16
 #epsilon_value = 0.1
 #alpha_value = 0.05
 
-def evaluate(model, model_adv, generator, data_type, devices, max_iteration, cuda):
+def evaluate(model, generator, data_type, devices, max_iteration, cuda):
     """Evaluate
     
     Args:
@@ -51,17 +51,17 @@ def evaluate(model, model_adv, generator, data_type, devices, max_iteration, cud
             
     # Forward
     dict = forward(model=model, 
-		   model_adv=model_adv,
+		   # model_adv=model_adv,
                    generate_func=generate_func, 
                    cuda=cuda, 
                    return_target=True)
 
     outputs = dict['output']    # (audios_num, classes_num)
-    outputs_adv = dict['output_adv']    # (audios_num, classes_num)
+    # outputs_adv = dict['output_adv']    # (audios_num, classes_num)
     targets = dict['target']    # (audios_num, classes_num)
     
     predictions = np.argmax(outputs, axis=-1)   # (audios_num,)
-    predictions_adv = np.argmax(outputs_adv, axis=-1)   # (audios_num,)
+    # predictions_adv = np.argmax(outputs_adv, axis=-1)   # (audios_num,)
 
     # Evaluate
     classes_num = outputs.shape[-1]
@@ -70,9 +70,9 @@ def evaluate(model, model_adv, generator, data_type, devices, max_iteration, cud
 
     loss = float(loss)
 
-    loss_adv = F.nll_loss(Variable(torch.Tensor(outputs_adv)), Variable(torch.LongTensor(targets))).data.numpy()
-
-    loss_adv = float(loss_adv)
+    # loss_adv = F.nll_loss(Variable(torch.Tensor(outputs_adv)), Variable(torch.LongTensor(targets))).data.numpy()
+    #
+    # loss_adv = float(loss_adv)
 
     confusion_matrix = calculate_confusion_matrix(
         targets, predictions, classes_num)
@@ -80,14 +80,15 @@ def evaluate(model, model_adv, generator, data_type, devices, max_iteration, cud
     accuracy = calculate_accuracy(targets, predictions, classes_num, 
                                   average='macro')
 
-    accuracy_adv = calculate_accuracy(targets, predictions_adv, classes_num, 
-                                  average='macro')
+    # accuracy_adv = calculate_accuracy(targets, predictions_adv, classes_num,
+    #                               average='macro')
 
-    return accuracy, loss, accuracy_adv, loss_adv
+    # return accuracy, loss, accuracy_adv, loss_adv
+    return accuracy, loss
 
 # forward: model_pytorch---        Return_heatmap = False
 # forward_heatmap: model_pytorch---        Return_heatmap = True
-def forward(model, model_adv, generate_func, cuda, return_target):
+def forward(model, generate_func, cuda, return_target):
     """Forward data to a model.
     
     Args:
@@ -123,24 +124,24 @@ def forward(model, model_adv, generate_func, cuda, return_target):
 	
 	# advesarial predict
         batch_y_pred = np.argmax(batch_output.data.cpu().numpy(), axis=-1)
-        batch_y_pred = move_data_to_gpu(batch_y_pred, cuda)
+        # batch_y_pred = move_data_to_gpu(batch_y_pred, cuda)
 
-        model_cp = copy.deepcopy(model)
-        for p in model_cp.parameters():
-            p.requires_grad = False
-        model_cp.eval()
-
-        model_adv.model = model_cp
-        del model_cp
-
-        batch_x_adv = model_adv.perturb(batch_x.data.cpu().numpy(), batch_y_pred.data.cpu().numpy(), cuda=cuda)
-        batch_x_adv = move_data_to_gpu(batch_x_adv, cuda)
-        batch_output_adv = model(batch_x_adv)
+        # model_cp = copy.deepcopy(model)
+        # for p in model_cp.parameters():
+        #     p.requires_grad = False
+        # model_cp.eval()
+        #
+        # model_adv.model = model_cp
+        # del model_cp
+        #
+        # batch_x_adv = model_adv.perturb(batch_x.data.cpu().numpy(), batch_y_pred.data.cpu().numpy(), cuda=cuda)
+        # batch_x_adv = move_data_to_gpu(batch_x_adv, cuda)
+        # batch_output_adv = model(batch_x_adv)
 
         # Append data
         outputs.append(batch_output.data.cpu().numpy())
         audio_names.append(batch_audio_names)
-        outputs_adv.append(batch_output_adv.data.cpu().numpy())        
+        # outputs_adv.append(batch_output_adv.data.cpu().numpy())
 
         if return_target:
             targets.append(batch_y)
@@ -153,7 +154,7 @@ def forward(model, model_adv, generate_func, cuda, return_target):
     audio_names = np.concatenate(audio_names, axis=0)
     dict['audio_name'] = audio_names
 
-    outputs_adv = np.concatenate(outputs_adv, axis=0)
+    # outputs_adv = np.concatenate(outputs_adv, axis=0)
     dict['output_adv'] = outputs_adv
     
     if return_target:
@@ -174,7 +175,7 @@ def train(args):
     filename = args.filename
     validation = args.validation
     holdout_fold = args.holdout_fold
-    epsilon_value = args.epsilon_value
+    # epsilon_value = args.epsilon_value
     alpha_value = args.alpha_value
     mini_data = args.mini_data
     cuda = args.cuda
@@ -203,7 +204,7 @@ def train(args):
                                     'fold{}_devel.txt'.format(holdout_fold))
                               
         models_dir = os.path.join(workspace, 'models', subdir, filename,
-                                  'holdout_fold={}'.format(holdout_fold), 'epsilon={}-alpha={}'.format(epsilon_value, alpha_value))
+                                  'holdout_fold={}'.format(holdout_fold), 'epsilon={}-alpha={}'.format(0, alpha_value))
                                         
     else:
         dev_train_csv = os.path.join(dataset_dir, subdir, 'evaluation_setup',
@@ -213,13 +214,13 @@ def train(args):
                                         'fold{}_test.txt'.format(holdout_fold))
         
         models_dir = os.path.join(workspace, 'models', subdir, filename,
-                                  'full_train', 'epsilon={}-alpha={}'.format(epsilon_value, alpha_value))
+                                  'full_train', 'epsilon={}-alpha={}'.format(0, alpha_value))
 
     create_folder(models_dir)
 
     # Model
     model = Model(classes_num)
-    adversary = FGSMAttack(epsilon=epsilon_value, alpha=alpha_value)
+    # adversary = FGSMAttack(epsilon=epsilon_value, alpha=alpha_value)
 
     if cuda:
         model.cuda()
@@ -244,27 +245,25 @@ def train(args):
 
             train_fin_time = time.time()
 
-            (tr_acc, tr_loss, tr_acc_adv, tr_loss_adv) = evaluate(model=model,
-					 model_adv=adversary,
+            (tr_acc, tr_loss) = evaluate(model=model,
+					 # model_adv=adversary,
                                          generator=generator,
                                          data_type='train',
                                          devices=devices,
                                          max_iteration=None,
                                          cuda=cuda)
 
-            logging.info('tr_acc: {:.3f}, tr_loss: {:.3f}, tr_acc_adv: {:.3f}, tr_loss_adv: {:.3f}'.format(
-                tr_acc, tr_loss, tr_acc_adv, tr_loss_adv))
+            logging.info('tr_acc: {:.3f}, tr_loss: {:.3f}'.format(tr_acc, tr_loss))
 
-            (va_acc, va_loss, va_acc_adv, va_loss_adv) = evaluate(model=model,
-					model_adv=adversary,
+            (va_acc, va_loss) = evaluate(model=model,
+					# model_adv=adversary,
                                         generator=generator,
                                         data_type='validate',
                                         devices=devices,
                                         max_iteration=None,
                                         cuda=cuda)
 
-            logging.info('va_acc: {:.3f}, va_loss: {:.3f}, va_acc_adv: {:.3f}, va_loss_adv: {:.3f}'.format(
-                    va_acc, va_loss, va_acc_adv, va_loss_adv))
+            logging.info('va_acc: {:.3f}, va_loss: {:.3f}'.format(va_acc, va_loss))
 
             train_time = train_fin_time - train_bgn_time
             validate_time = time.time() - train_fin_time
@@ -303,24 +302,24 @@ def train(args):
 
         loss = F.nll_loss(batch_output, batch_y)
 
-        if iteration >= 1000:
-            batch_y_pred = np.argmax(batch_output.data.cpu().numpy(), axis=-1)
-            batch_y_pred = move_data_to_gpu(batch_y_pred, cuda)
-
-            model_cp = copy.deepcopy(model)
-            for p in model_cp.parameters():
-                p.requires_grad = False
-            model_cp.eval()
-
-            adversary.model = model_cp
-            del model_cp
-
-            batch_x_adv = adversary.perturb(batch_x.data.cpu().numpy(), batch_y_pred.data.cpu().numpy(), cuda=cuda)
-            batch_x_adv = move_data_to_gpu(batch_x_adv, cuda)
-            batch_output_adv = model(batch_x_adv)
-            loss_adv = F.nll_loss(batch_output_adv, batch_y)
-
-            loss = 0.5 * loss + 0.5 * loss_adv
+        # if iteration >= 1000:
+        #     batch_y_pred = np.argmax(batch_output.data.cpu().numpy(), axis=-1)
+        #     batch_y_pred = move_data_to_gpu(batch_y_pred, cuda)
+        #
+        #     model_cp = copy.deepcopy(model)
+        #     for p in model_cp.parameters():
+        #         p.requires_grad = False
+        #     model_cp.eval()
+        #
+        #     adversary.model = model_cp
+        #     del model_cp
+        #
+        #     batch_x_adv = adversary.perturb(batch_x.data.cpu().numpy(), batch_y_pred.data.cpu().numpy(), cuda=cuda)
+        #     batch_x_adv = move_data_to_gpu(batch_x_adv, cuda)
+        #     batch_output_adv = model(batch_x_adv)
+        #     loss_adv = F.nll_loss(batch_output_adv, batch_y)
+        #
+        #     loss = 0.5 * loss + 0.5 * loss_adv
 
             #if iteration % 10 == 0:
             #    logging.info('batch loss: {}, batch loss_adv: {}'.format(loss, loss_adv))
@@ -345,7 +344,7 @@ def inference_validation_data(args):
     feature_type = args.feature_type
     holdout_fold = args.holdout_fold
     iteration = args.iteration
-    epsilon_value = args.epsilon_value
+    # epsilon_value = args.epsilon_value
     alpha_value = args.alpha_value
     filename = args.filename
     cuda = args.cuda
@@ -371,7 +370,7 @@ def inference_validation_data(args):
         dev_validate_csv = os.path.join(dataset_dir, subdir, 'evaluation_setup', 'fold{}_devel.txt'.format(holdout_fold))
 
         model_path = os.path.join(workspace, 'models', subdir, filename,
-                                'holdout_fold={}'.format(holdout_fold), 'epsilon={}-alpha={}'.format(epsilon_value, alpha_value),
+                                'holdout_fold={}'.format(holdout_fold), 'epsilon={}-alpha={}'.format(0, alpha_value),
                                 'md_{}_iters.tar'.format(iteration))
     else:
 
@@ -380,14 +379,19 @@ def inference_validation_data(args):
         dev_validate_csv = os.path.join(dataset_dir, subdir, 'evaluation_setup', 'fold{}_test.txt'.format(holdout_fold))
 
         model_path = os.path.join(workspace, 'models', subdir, filename,
-                                  'full_train', 'epsilon={}-alpha={}'.format(epsilon_value, alpha_value),
+                                  'full_train', 'epsilon={}-alpha={}'.format(0, alpha_value),
+                                  'md_{}_iters.tar'.format(iteration))
+
+    # tmp model path
+    model_path = os.path.join(workspace, 'models', subdir, 'main_pytorch',
+                                  'holdout_fold=1', 'epsilon=0-alpha=0.1',
                                   'md_{}_iters.tar'.format(iteration))
 
     # Load model
     model = Model(classes_num)
     checkpoint = torch.load(model_path)
     model.load_state_dict(checkpoint['state_dict'])
-    adversary = FGSMAttack(epsilon=epsilon_value, alpha=alpha_value)
+    # adversary = FGSMAttack(epsilon=epsilon_value, alpha=alpha_value)
 
     if cuda:
         model.cuda()
@@ -409,17 +413,20 @@ def inference_validation_data(args):
 
         # Inference
         dict = forward(model=model,
-		       model_adv=adversary,
+		       # model_adv=adversary,
                        generate_func=generate_func, 
                        cuda=cuda, 
                        return_target=True)
 
+        # print(dict['audio_name'])
+
         outputs = dict['output']    # (audios_num, classes_num)
         targets = dict['target']    # (audios_num, classes_num)
-        outputs_adv = dict['output_adv']    # (audios_num, classes_num)
+        # outputs_adv = dict['output_adv']    # (audios_num, classes_num)
 
         predictions = np.argmax(outputs, axis=-1)
-        predictions_adv = np.argmax(outputs_adv, axis=-1)
+        # predictions_adv = np.argmax(outputs_adv, axis=-1)
+        # print(predictions)
 
         classes_num = outputs.shape[-1]      
 
@@ -429,12 +436,12 @@ def inference_validation_data(args):
         class_wise_accuracy = calculate_accuracy(targets, predictions, classes_num)
 
 
-        confusion_matrix_adv = calculate_confusion_matrix(targets, predictions_adv, classes_num)
-            
-        class_wise_accuracy_adv = calculate_accuracy(targets, predictions_adv, classes_num)
+        # confusion_matrix_adv = calculate_confusion_matrix(targets, predictions_adv, classes_num)
+        #
+        # class_wise_accuracy_adv = calculate_accuracy(targets, predictions_adv, classes_num)
 
         _, _, Macc = calculate_recall_specificity_Macc(confusion_matrix)
-        _, _, Macc_adv = calculate_recall_specificity_Macc(confusion_matrix_adv)
+
 
         # Print
         print_accuracy(class_wise_accuracy, labels)
@@ -445,13 +452,11 @@ def inference_validation_data(args):
         logging.info('confusion_matrix: \n'.format(confusion_matrix))
         logging.info('confusion_matrix Macc: \n'.format(Macc))
 
-        print_accuracy(class_wise_accuracy_adv, labels)
-        print('confusion_matrix Adv: \n', confusion_matrix_adv)
-        print('confusion_matrix Macc Adv: \n', str(Macc_adv))
-        confusion_matrix_adv = np.array2string(confusion_matrix_adv)
-        # logging.info('confusion_matrix: \n', confusion_matrix_adv)
-        logging.info('confusion_matrix Adv: \n'.format(confusion_matrix_adv))
-        logging.info('confusion_matrix Macc Adv: \n'.format(Macc_adv))
+        # print_accuracy(class_wise_accuracy_adv, labels)
+        # print('confusion_matrix: \n', confusion_matrix_adv)
+        # confusion_matrix_adv = np.array2string(confusion_matrix_adv)
+        # # logging.info('confusion_matrix: \n', confusion_matrix_adv)
+        # logging.info('confusion_matrix: \n'.format(confusion_matrix_adv))
 
         # Plot confusion matrix
 #        plot_confusion_matrix(
@@ -460,11 +465,6 @@ def inference_validation_data(args):
 #            labels=labels,
 #            values=class_wise_accuracy,
 #            path=os.path.join(workspace, 'logs', 'main_pytorch', 'fig-confmat-device-'+device+'.pdf'))
-
-    
-
-
-
 
 
 
@@ -481,12 +481,11 @@ if __name__ == '__main__':
     parser_train.add_argument('--feature_type', type=str, default='logmel')
     parser_train.add_argument('--validation', action='store_true', default=False)
     parser_train.add_argument('--holdout_fold', type=int)
-    parser_train.add_argument('--epsilon_value', type=float)
+    # parser_train.add_argument('--epsilon_value', type=float)
     parser_train.add_argument('--alpha_value', type=float)
     parser_train.add_argument('--cuda', action='store_true', default=False)
     parser_train.add_argument('--mini_data', action='store_true', default=False)
 
-    
     parser_inference_validation_data = subparsers.add_parser('inference_validation_data')
     parser_inference_validation_data.add_argument('--dataset_dir', type=str, required=True)
     parser_inference_validation_data.add_argument('--subdir', type=str, required=True)
@@ -494,11 +493,10 @@ if __name__ == '__main__':
     parser_inference_validation_data.add_argument('--feature_type', type=str, default='logmel')
     parser_inference_validation_data.add_argument('--validation', action='store_true', default=False)
     parser_inference_validation_data.add_argument('--holdout_fold', type=int, required=True)
-    parser_inference_validation_data.add_argument('--epsilon_value', type=float)
+    # parser_inference_validation_data.add_argument('--epsilon_value', type=float)
     parser_inference_validation_data.add_argument('--alpha_value', type=float)
     parser_inference_validation_data.add_argument('--iteration', type=int, required=True)
     parser_inference_validation_data.add_argument('--cuda', action='store_true', default=False)
-
 
     args = parser.parse_args()
 

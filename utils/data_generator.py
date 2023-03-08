@@ -20,7 +20,7 @@ class DataGenerator(object):
           batch_size: int
           dev_train_csv: str | None, if None then use all data for training
           dev_validate_csv: str | None, if None then use all data for training
-          seed: int, random seed
+          seed: int, ran3444dom seed
         """
 
         self.batch_size = batch_size
@@ -34,9 +34,13 @@ class DataGenerator(object):
         hf = h5py.File(hdf5_path, 'r')
 
         self.audio_names = np.array([s.decode() for s in hf['filename'][:]])
+        # print(self.audio_names)
         self.x = hf['feature'][:]
+        # print(self.x.shape)
         self.emotion_labels = [s.decode() for s in hf['emotion_label'][:]]
-        self.y = np.array([lb_to_ix[lb] for lb in self.emotion_labels])
+        # print(self.emotion_labels)
+        # self.y = np.array([lb_to_ix[lb] for lb in self.emotion_labels])
+        self.y = np.array([int(lb) for lb in self.emotion_labels])
 
         hf.close()
         logging.info('Loading data time: {:.3f} s'.format(
@@ -90,7 +94,8 @@ class DataGenerator(object):
         audio_indexes = []
 
         for li in lis:
-            audio_name = li[0]
+            # audio_name = li[0]
+            audio_name = li[0].split(',')[0]+'.wav'
 
             if audio_name in self.audio_names:
                 audio_index = np.where(self.audio_names == audio_name)[0][0]
@@ -108,6 +113,7 @@ class DataGenerator(object):
 
         batch_size = self.batch_size
         audio_indexes = np.array(self.train_audio_indexes)
+        # print(audio_indexes)
         audios_num = len(audio_indexes)
 
         self.random_state.shuffle(audio_indexes)

@@ -141,6 +141,42 @@ def calculate_confusion_matrix(target, predict, classes_num):
 
     return confusion_matrix
 
+def calculate_recall_specificity_Macc(confusion_matrix):
+    """
+    Calculates recall and specificity from a confusion matrix.
+
+    Parameters:
+    confusion_matrix (numpy.matrix): A square matrix of size m x m where m is the number of classes.
+
+    Returns:
+    recall (numpy.float64): The recall value.
+    specificity (numpy.float64): The specificity value.
+    """
+    # Calculate the sum of true positives and false negatives for each class
+    tp_fn = np.sum(confusion_matrix, axis=1)
+
+    # Calculate the sum of true positives and false positives for each class
+    tp_fp = np.sum(confusion_matrix, axis=0)
+
+    # Calculate the true positives for each class
+    tp = np.diag(confusion_matrix)
+
+    # Calculate the false negatives for each class
+    fn = tp_fn - tp
+
+    # Calculate the false positives for each class
+    fp = tp_fp - tp
+
+    # Calculate the true negatives for each class
+    tn = np.sum(confusion_matrix) - (tp_fn + tp_fp - tp)
+
+    # Calculate recall and specificity for each class
+    recall = tp / tp_fn
+    specificity = tn / (tn + fp)
+    Macc = (recall+specificity)/2
+
+    return recall, specificity, Macc
+
 
 def print_accuracy(class_wise_accuracy, labels):
 
